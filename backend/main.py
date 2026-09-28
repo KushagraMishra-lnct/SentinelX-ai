@@ -50,6 +50,8 @@ def get_alerts():
                 "risk_level": alert.risk_level,
                 "anomaly_score": alert.anomaly_score,
                 "anomaly_level": alert.anomaly_level,
+                "ml_score": alert.ml_score,
+                "ml_prediction": alert.ml_prediction,
                 "created_at": alert.created_at,
             }
             for alert in alerts

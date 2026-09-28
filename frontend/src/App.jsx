@@ -458,8 +458,21 @@ function AlertRow({ alert }) {
 </div>
 
 
+{alert.ml_score > 0 ? (
+  <>
+    <span className={`ml-prediction ${alert.ml_prediction?.toLowerCase()}`}>
+      ML: {alert.ml_prediction}
+    </span>
 
-
+    <span className="ml-score">
+      ML Score: {alert.ml_score}/100
+    </span>
+  </>
+) : (
+  <span className="ml-prediction">
+    ML: NOT ANALYZED
+  </span>
+)}
 
 
 

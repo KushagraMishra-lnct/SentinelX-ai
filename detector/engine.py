@@ -4,7 +4,8 @@ from detector.web_detector import detect_web_attack
 
 from backend.alert_service import save_alert
 from backend.event_service import save_event
-
+from ml.feature_engineering import extract_features
+from ml.predictor import predict_anomaly, anomaly_score
 
 def run_auth_detection():
     events = parse_log_file("logs/auth.log")
@@ -61,18 +62,34 @@ def run_web_detection():
 
 
 def run_detection():
+    alerts = []
+
     auth_alerts, auth_events = run_auth_detection()
     web_alerts, web_events = run_web_detection()
 
-    all_events = auth_events + web_events
-    all_alerts = auth_alerts + web_alerts
+    alerts.extend(auth_alerts)
+    alerts.extend(web_alerts)
 
-    return all_alerts, all_events
+    events = auth_events + web_events
 
+    features = extract_features(events)
+    ml_prediction = predict_anomaly(features)
+    ml_score = anomaly_score(features)
+
+    for alert in alerts:
+        alert["ml_prediction"] = ml_prediction
+        alert["ml_score"] = ml_score
+
+    return alerts, events
 
 if __name__ == "__main__":
     alerts, events = run_detection()
+    features = extract_features(events)
+    ml_prediction = predict_anomaly(features)
+    ml_score = anomaly_score(features)
 
+    print(f"[+] ML prediction: {ml_prediction}")
+    print(f"[+] ML anomaly score: {ml_score}/100")
     print(f"\n[+] Detection complete")
     print(f"[+] Events analyzed: {len(events)}")
     print(f"[+] Alerts generated: {len(alerts)}\n")

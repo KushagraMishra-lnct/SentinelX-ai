@@ -26,9 +26,13 @@ def save_alert(alert_data, all_events=None):
         risk = calculate_risk(alert_data)
 
         # Combine rule risk + anomaly risk
+
+        ml_score = alert_data.get("ml_score", 0)
+
         final_score = round(
-            (risk["score"] * 0.7)
-            + (anomaly_score * 0.3)
+            (risk["score"] * 0.6)
+            + (anomaly_score * 0.2)
+            + (ml_score * 0.2)
         )
 
         final_score = min(final_score, 100)
@@ -47,6 +51,8 @@ def save_alert(alert_data, all_events=None):
             severity=alert_data["severity"],
             ip=alert_data["ip"],
             message=alert_data["message"],
+            ml_score=alert_data.get("ml_score", 0),
+            ml_prediction=alert_data.get("ml_prediction", "NORMAL"),
             risk_score=final_score,
             risk_level=final_level,
             anomaly_score=anomaly_score,
