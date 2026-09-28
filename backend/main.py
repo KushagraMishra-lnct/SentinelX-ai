@@ -46,10 +46,13 @@ def get_alerts():
                 "severity": alert.severity,
                 "ip": alert.ip,
                 "message": alert.message,
+                "risk_score": alert.risk_score,
+                "risk_level": alert.risk_level,
                 "created_at": alert.created_at,
             }
             for alert in alerts
         ]
+
 
     finally:
         db.close()

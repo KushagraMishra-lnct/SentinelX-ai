@@ -20,8 +20,17 @@ class Alert(Base):
     ip: Mapped[str] = mapped_column(String(45))
     message: Mapped[str] = mapped_column(Text)
 
+    risk_score: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    risk_level: Mapped[str] = mapped_column(
+        String(20),
+        default="LOW",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,
     )
-

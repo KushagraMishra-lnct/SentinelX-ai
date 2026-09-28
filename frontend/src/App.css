@@ -642,3 +642,24 @@ button {
     display: none;
   }
 }
+.risk-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.risk-score {
+  color: #687689;
+  font-size: 9px;
+}
+
+.severity.medium {
+  color: #eeb75e;
+  background: #292116;
+}
+
+.severity.low {
+  color: #70d49a;
+  background: #10251a;
+}

@@ -434,11 +434,15 @@ function AlertRow({ alert }) {
 
       <div className="ip">{alert.ip}</div>
 
-      <div>
+      <div className="risk-cell">
         <span
-          className={`severity ${alert.severity.toLowerCase()}`}
+          className={`severity ${alert.risk_level.toLowerCase()}`}
         >
-          {alert.severity}
+          {alert.risk_level}
+        </span>
+
+        <span className="risk-score">
+          Risk {alert.risk_score}/100
         </span>
       </div>
 
