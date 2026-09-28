@@ -1,6 +1,7 @@
 from detector.log_parser import parse_log_file
 from detector.detector import detect_brute_force
 from detector.web_detector import detect_web_attack
+from backend.alert_service import save_alert
 
 
 def run_auth_detection():
@@ -33,11 +34,13 @@ if __name__ == "__main__":
     print(f"\n[+] Detection complete")
     print(f"[+] Alerts generated: {len(alerts)}\n")
 
-    for alert in alerts:
+    for alert_data in alerts:
+        saved_alert = save_alert(alert_data)
+
         print(
-            f"[{alert['severity']}] "
-            f"{alert['type']} | "
-            f"{alert['ip']} | "
-            f"{alert['message']}"
+            f"[{saved_alert.severity}] "
+            f"{saved_alert.alert_type} | "
+            f"{saved_alert.ip} | "
+            f"Saved as alert #{saved_alert.id}"
         )
 
