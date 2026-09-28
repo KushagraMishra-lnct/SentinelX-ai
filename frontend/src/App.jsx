@@ -1,142 +1,328 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
-  ShieldAlert,
   Activity,
   AlertTriangle,
-  Server,
+  Bell,
+  CircleDot,
   RefreshCw,
+  Search,
+  Shield,
+  ShieldAlert,
+  Terminal,
 } from "lucide-react";
 import "./App.css";
 
+const API = "http://127.0.0.1:8000";
+
 function App() {
   const [alerts, setAlerts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [severity, setSeverity] = useState("ALL");
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
-  const loadAlerts = async () => {
+  async function loadAlerts() {
     try {
       setLoading(true);
 
-      const response = await fetch("http://127.0.0.1:8000/alerts");
+      const response = await fetch(`${API}/alerts`);
+
+      if (!response.ok) {
+        throw new Error("API request failed");
+      }
+
       const data = await response.json();
 
       setAlerts(data);
+      setLastUpdated(new Date());
     } catch (error) {
-      console.error("Failed to load alerts:", error);
+      console.error("Unable to load alerts:", error);
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     loadAlerts();
+
+    const interval = setInterval(loadAlerts, 10000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  const critical = alerts.filter(
-    (alert) => alert.severity === "CRITICAL"
-  ).length;
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((alert) => {
+      const matchesSeverity =
+        severity === "ALL" || alert.severity === severity;
+
+      const searchText = search.toLowerCase();
+
+      const matchesSearch =
+        !search ||
+        alert.type?.toLowerCase().includes(searchText) ||
+        alert.ip?.toLowerCase().includes(searchText) ||
+        alert.message?.toLowerCase().includes(searchText);
+
+      return matchesSeverity && matchesSearch;
+    });
+  }, [alerts, severity, search]);
 
   const high = alerts.filter(
     (alert) => alert.severity === "HIGH"
   ).length;
 
+  const critical = alerts.filter(
+    (alert) => alert.severity === "CRITICAL"
+  ).length;
+
+  const uniqueIPs = new Set(
+    alerts.map((alert) => alert.ip)
+  ).size;
+
   return (
     <div className="app">
-      <header>
+
+      <header className="topbar">
         <div className="brand">
-          <ShieldAlert size={32} />
+          <div className="brand-icon">
+            <Shield size={25} />
+          </div>
+
           <div>
             <h1>SentinelX</h1>
-            <p>Security Monitoring Platform</p>
+            <p>Security Operations Center</p>
           </div>
         </div>
 
-        <div className="status">
-          <span className="status-dot"></span>
+        <div className="system-status">
+          <CircleDot size={13} />
           SYSTEM ONLINE
         </div>
       </header>
 
-      <main>
-        <section className="stats">
-          <div className="card">
-            <Activity />
-            <div>
-              <span>Total Events</span>
-              <strong>{alerts.length}</strong>
+      <div className="layout">
+
+        <aside className="sidebar">
+
+          <div className="nav-section">
+            <span>MONITORING</span>
+
+            <button className="nav-item active">
+              <Activity size={18} />
+              Dashboard
+            </button>
+
+            <button className="nav-item">
+              <Bell size={18} />
+              Alerts
+              <span className="nav-count">{alerts.length}</span>
+            </button>
+
+            <button className="nav-item">
+              <Terminal size={18} />
+              Events
+            </button>
+          </div>
+
+          <div className="sidebar-bottom">
+            <div className="engine-status">
+              <div className="engine-dot"></div>
+              <div>
+                <strong>Detection Engine</strong>
+                <span>Operational</span>
+              </div>
             </div>
           </div>
 
-          <div className="card">
-            <AlertTriangle />
-            <div>
-              <span>High Alerts</span>
-              <strong>{high}</strong>
-            </div>
-          </div>
+        </aside>
 
-          <div className="card">
-            <ShieldAlert />
-            <div>
-              <span>Critical Alerts</span>
-              <strong>{critical}</strong>
-            </div>
-          </div>
+        <main className="main">
 
-          <div className="card">
-            <Server />
+          <div className="page-heading">
             <div>
-              <span>System</span>
-              <strong>ONLINE</strong>
-            </div>
-          </div>
-        </section>
-
-        <section className="alerts-panel">
-          <div className="panel-header">
-            <div>
-              <h2>Security Alerts</h2>
-              <p>Detected threats from SentinelX detection engine</p>
+              <h2>Security Dashboard</h2>
+              <p>Real-time overview of detected security events.</p>
             </div>
 
-            <button onClick={loadAlerts}>
-              <RefreshCw size={16} />
+            <button
+              className="refresh-button"
+              onClick={loadAlerts}
+              disabled={loading}
+            >
+              <RefreshCw
+                size={16}
+                className={loading ? "spin" : ""}
+              />
               Refresh
             </button>
           </div>
 
-          {loading ? (
-            <div className="empty">Loading alerts...</div>
-          ) : alerts.length === 0 ? (
-            <div className="empty">No security alerts detected.</div>
-          ) : (
-            <div className="alert-list">
-              {alerts.map((alert) => (
-                <div className="alert" key={alert.id}>
-                  <div className="alert-icon">
-                    <ShieldAlert size={20} />
-                  </div>
+          <section className="stats">
 
-                  <div className="alert-info">
-                    <strong>{alert.type}</strong>
-                    <span>{alert.message}</span>
-                    <small>
-                      IP: {alert.ip} ·{" "}
-                      {new Date(alert.created_at).toLocaleString()}
-                    </small>
-                  </div>
+            <StatCard
+              icon={<Activity />}
+              label="Total Alerts"
+              value={alerts.length}
+            />
 
-                  <div className={`severity ${alert.severity.toLowerCase()}`}>
-                    {alert.severity}
-                  </div>
-                </div>
-              ))}
+            <StatCard
+              icon={<AlertTriangle />}
+              label="High Severity"
+              value={high}
+            />
+
+            <StatCard
+              icon={<ShieldAlert />}
+              label="Critical"
+              value={critical}
+            />
+
+            <StatCard
+              icon={<Shield />}
+              label="Source IPs"
+              value={uniqueIPs}
+            />
+
+          </section>
+
+          <section className="panel">
+
+            <div className="panel-heading">
+
+              <div>
+                <h3>Security Alerts</h3>
+                <p>
+                  Threats detected by the SentinelX detection engine
+                </p>
+              </div>
+
+              <div className="updated">
+                {lastUpdated
+                  ? `Updated ${lastUpdated.toLocaleTimeString()}`
+                  : "Waiting for data"}
+              </div>
+
             </div>
-          )}
-        </section>
-      </main>
+
+            <div className="toolbar">
+
+              <div className="search">
+                <Search size={17} />
+                <input
+                  placeholder="Search alerts, IPs or attack types..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="filters">
+
+                {["ALL", "HIGH", "CRITICAL"].map((level) => (
+                  <button
+                    key={level}
+                    className={
+                      severity === level
+                        ? "filter active-filter"
+                        : "filter"
+                    }
+                    onClick={() => setSeverity(level)}
+                  >
+                    {level}
+                  </button>
+                ))}
+
+              </div>
+
+            </div>
+
+            <div className="alert-table">
+
+              <div className="table-header">
+                <span>THREAT</span>
+                <span>SOURCE</span>
+                <span>SEVERITY</span>
+                <span>TIME</span>
+              </div>
+
+              {filteredAlerts.length === 0 ? (
+
+                <div className="empty">
+                  <Shield size={30} />
+                  <strong>No alerts found</strong>
+                  <span>
+                    No security events match your current filters.
+                  </span>
+                </div>
+
+              ) : (
+
+                filteredAlerts.map((alert) => (
+
+                  <div className="alert-row" key={alert.id}>
+
+                    <div className="threat">
+
+                      <div className="threat-icon">
+                        <ShieldAlert size={18} />
+                      </div>
+
+                      <div>
+                        <strong>{alert.type}</strong>
+                        <span>{alert.message}</span>
+                      </div>
+
+                    </div>
+
+                    <div className="ip">
+                      {alert.ip}
+                    </div>
+
+                    <div>
+                      <span
+                        className={`severity ${alert.severity.toLowerCase()}`}
+                      >
+                        {alert.severity}
+                      </span>
+                    </div>
+
+                    <div className="time">
+                      {new Date(
+                        alert.created_at
+                      ).toLocaleTimeString()}
+                    </div>
+
+                  </div>
+
+                ))
+
+              )}
+
+            </div>
+
+          </section>
+
+        </main>
+
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon, label, value }) {
+  return (
+    <div className="stat-card">
+
+      <div className="stat-icon">
+        {icon}
+      </div>
+
+      <div>
+        <span>{label}</span>
+        <strong>{value}</strong>
+      </div>
+
     </div>
   );
 }
 
 export default App;
-
