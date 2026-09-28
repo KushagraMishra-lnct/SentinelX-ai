@@ -15,37 +15,35 @@ import "./App.css";
 const API = "http://127.0.0.1:8000";
 
 function App() {
+  const [page, setPage] = useState("dashboard");
   const [alerts, setAlerts] = useState([]);
+  const [events, setEvents] = useState([]);
   const [severity, setSeverity] = useState("ALL");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState(null);
 
-  async function loadAlerts() {
+  async function loadData() {
     try {
       setLoading(true);
 
-      const response = await fetch(`${API}/alerts`);
+      const [alertsResponse, eventsResponse] = await Promise.all([
+        fetch(`${API}/alerts`),
+        fetch(`${API}/events`),
+      ]);
 
-      if (!response.ok) {
-        throw new Error("API request failed");
-      }
-
-      const data = await response.json();
-
-      setAlerts(data);
-      setLastUpdated(new Date());
+      setAlerts(await alertsResponse.json());
+      setEvents(await eventsResponse.json());
     } catch (error) {
-      console.error("Unable to load alerts:", error);
+      console.error("Failed to load SentinelX data:", error);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadAlerts();
+    loadData();
 
-    const interval = setInterval(loadAlerts, 10000);
+    const interval = setInterval(loadData, 10000);
 
     return () => clearInterval(interval);
   }, []);
@@ -55,33 +53,38 @@ function App() {
       const matchesSeverity =
         severity === "ALL" || alert.severity === severity;
 
-      const searchText = search.toLowerCase();
+      const text = search.toLowerCase();
 
-      const matchesSearch =
-        !search ||
-        alert.type?.toLowerCase().includes(searchText) ||
-        alert.ip?.toLowerCase().includes(searchText) ||
-        alert.message?.toLowerCase().includes(searchText);
-
-      return matchesSeverity && matchesSearch;
+      return (
+        matchesSeverity &&
+        (!search ||
+          alert.type?.toLowerCase().includes(text) ||
+          alert.ip?.toLowerCase().includes(text) ||
+          alert.message?.toLowerCase().includes(text))
+      );
     });
   }, [alerts, severity, search]);
 
-  const high = alerts.filter(
-    (alert) => alert.severity === "HIGH"
-  ).length;
+  const filteredEvents = useMemo(() => {
+    const text = search.toLowerCase();
 
+    return events.filter(
+      (event) =>
+        !search ||
+        event.source?.toLowerCase().includes(text) ||
+        event.level?.toLowerCase().includes(text) ||
+        event.ip?.toLowerCase().includes(text) ||
+        event.message?.toLowerCase().includes(text)
+    );
+  }, [events, search]);
+
+  const high = alerts.filter((a) => a.severity === "HIGH").length;
   const critical = alerts.filter(
-    (alert) => alert.severity === "CRITICAL"
+    (a) => a.severity === "CRITICAL"
   ).length;
-
-  const uniqueIPs = new Set(
-    alerts.map((alert) => alert.ip)
-  ).size;
 
   return (
     <div className="app">
-
       <header className="topbar">
         <div className="brand">
           <div className="brand-icon">
@@ -101,26 +104,40 @@ function App() {
       </header>
 
       <div className="layout">
-
         <aside className="sidebar">
-
           <div className="nav-section">
             <span>MONITORING</span>
 
-            <button className="nav-item active">
+            <button
+              className={`nav-item ${
+                page === "dashboard" ? "active" : ""
+              }`}
+              onClick={() => setPage("dashboard")}
+            >
               <Activity size={18} />
               Dashboard
             </button>
 
-            <button className="nav-item">
+            <button
+              className={`nav-item ${
+                page === "alerts" ? "active" : ""
+              }`}
+              onClick={() => setPage("alerts")}
+            >
               <Bell size={18} />
               Alerts
               <span className="nav-count">{alerts.length}</span>
             </button>
 
-            <button className="nav-item">
+            <button
+              className={`nav-item ${
+                page === "events" ? "active" : ""
+              }`}
+              onClick={() => setPage("events")}
+            >
               <Terminal size={18} />
               Events
+              <span className="nav-count">{events.length}</span>
             </button>
           </div>
 
@@ -133,176 +150,300 @@ function App() {
               </div>
             </div>
           </div>
-
         </aside>
 
         <main className="main">
+          {page === "dashboard" && (
+            <Dashboard
+              alerts={alerts}
+              events={events}
+              high={high}
+              critical={critical}
+              setPage={setPage}
+              loadData={loadData}
+              loading={loading}
+            />
+          )}
 
-          <div className="page-heading">
-            <div>
-              <h2>Security Dashboard</h2>
-              <p>Real-time overview of detected security events.</p>
-            </div>
+          {page === "alerts" && (
+            <AlertsPage
+              alerts={filteredAlerts}
+              severity={severity}
+              setSeverity={setSeverity}
+              search={search}
+              setSearch={setSearch}
+              loadData={loadData}
+              loading={loading}
+            />
+          )}
 
-            <button
-              className="refresh-button"
-              onClick={loadAlerts}
-              disabled={loading}
-            >
-              <RefreshCw
-                size={16}
-                className={loading ? "spin" : ""}
-              />
-              Refresh
-            </button>
+          {page === "events" && (
+            <EventsPage
+              events={filteredEvents}
+              search={search}
+              setSearch={setSearch}
+              loadData={loadData}
+              loading={loading}
+            />
+          )}
+        </main>
+      </div>
+    </div>
+  );
+}
+
+function Dashboard({
+  alerts,
+  events,
+  high,
+  critical,
+  setPage,
+  loadData,
+  loading,
+}) {
+  const uniqueIPs = new Set(alerts.map((a) => a.ip)).size;
+
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h2>Security Dashboard</h2>
+          <p>Real-time overview of SentinelX activity.</p>
+        </div>
+
+        <RefreshButton
+          onClick={loadData}
+          loading={loading}
+        />
+      </div>
+
+      <section className="stats">
+        <StatCard
+          icon={<Activity />}
+          label="Total Events"
+          value={events.length}
+        />
+
+        <StatCard
+          icon={<AlertTriangle />}
+          label="High Alerts"
+          value={high}
+        />
+
+        <StatCard
+          icon={<ShieldAlert />}
+          label="Critical"
+          value={critical}
+        />
+
+        <StatCard
+          icon={<Shield />}
+          label="Source IPs"
+          value={uniqueIPs}
+        />
+      </section>
+
+      <section className="panel">
+        <div className="panel-heading">
+          <div>
+            <h3>Recent Security Alerts</h3>
+            <p>Latest threats detected by SentinelX.</p>
           </div>
 
-          <section className="stats">
+          <button
+            className="text-button"
+            onClick={() => setPage("alerts")}
+          >
+            View all
+          </button>
+        </div>
 
-            <StatCard
-              icon={<Activity />}
-              label="Total Alerts"
-              value={alerts.length}
+        {alerts.slice(0, 5).map((alert) => (
+          <AlertRow key={alert.id} alert={alert} />
+        ))}
+      </section>
+    </>
+  );
+}
+
+function AlertsPage({
+  alerts,
+  severity,
+  setSeverity,
+  search,
+  setSearch,
+  loadData,
+  loading,
+}) {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h2>Security Alerts</h2>
+          <p>Detected threats and security violations.</p>
+        </div>
+
+        <RefreshButton
+          onClick={loadData}
+          loading={loading}
+        />
+      </div>
+
+      <section className="panel">
+        <Toolbar
+          search={search}
+          setSearch={setSearch}
+          severity={severity}
+          setSeverity={setSeverity}
+        />
+
+        {alerts.length === 0 ? (
+          <Empty />
+        ) : (
+          alerts.map((alert) => (
+            <AlertRow key={alert.id} alert={alert} />
+          ))
+        )}
+      </section>
+    </>
+  );
+}
+
+function EventsPage({
+  events,
+  search,
+  setSearch,
+  loadData,
+  loading,
+}) {
+  return (
+    <>
+      <div className="page-heading">
+        <div>
+          <h2>Security Events</h2>
+          <p>Raw events collected from monitored sources.</p>
+        </div>
+
+        <RefreshButton
+          onClick={loadData}
+          loading={loading}
+        />
+      </div>
+
+      <section className="panel">
+        <div className="toolbar">
+          <div className="search">
+            <Search size={17} />
+
+            <input
+              placeholder="Search events, IPs or messages..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
             />
+          </div>
+        </div>
 
-            <StatCard
-              icon={<AlertTriangle />}
-              label="High Severity"
-              value={high}
-            />
+        <div className="event-header">
+          <span>SOURCE</span>
+          <span>LEVEL</span>
+          <span>SOURCE IP</span>
+          <span>MESSAGE</span>
+          <span>TIME</span>
+        </div>
 
-            <StatCard
-              icon={<ShieldAlert />}
-              label="Critical"
-              value={critical}
-            />
+        {events.length === 0 ? (
+          <Empty />
+        ) : (
+          events.map((event) => (
+            <div className="event-row" key={event.id}>
+              <span>{event.source}</span>
 
-            <StatCard
-              icon={<Shield />}
-              label="Source IPs"
-              value={uniqueIPs}
-            />
+              <span className={`level ${event.level.toLowerCase()}`}>
+                {event.level}
+              </span>
 
-          </section>
+              <span className="ip">{event.ip}</span>
 
-          <section className="panel">
+              <span className="event-message">
+                {event.message}
+              </span>
 
-            <div className="panel-heading">
-
-              <div>
-                <h3>Security Alerts</h3>
-                <p>
-                  Threats detected by the SentinelX detection engine
-                </p>
-              </div>
-
-              <div className="updated">
-                {lastUpdated
-                  ? `Updated ${lastUpdated.toLocaleTimeString()}`
-                  : "Waiting for data"}
-              </div>
-
+              <span className="time">
+                {new Date(
+                  event.created_at
+                ).toLocaleTimeString()}
+              </span>
             </div>
+          ))
+        )}
+      </section>
+    </>
+  );
+}
 
-            <div className="toolbar">
+function Toolbar({
+  search,
+  setSearch,
+  severity,
+  setSeverity,
+}) {
+  return (
+    <div className="toolbar">
+      <div className="search">
+        <Search size={17} />
 
-              <div className="search">
-                <Search size={17} />
-                <input
-                  placeholder="Search alerts, IPs or attack types..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                />
-              </div>
+        <input
+          placeholder="Search alerts, IPs or attack types..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+      </div>
 
-              <div className="filters">
+      <div className="filters">
+        {["ALL", "HIGH", "CRITICAL"].map((level) => (
+          <button
+            key={level}
+            className={
+              severity === level
+                ? "filter active-filter"
+                : "filter"
+            }
+            onClick={() => setSeverity(level)}
+          >
+            {level}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-                {["ALL", "HIGH", "CRITICAL"].map((level) => (
-                  <button
-                    key={level}
-                    className={
-                      severity === level
-                        ? "filter active-filter"
-                        : "filter"
-                    }
-                    onClick={() => setSeverity(level)}
-                  >
-                    {level}
-                  </button>
-                ))}
+function AlertRow({ alert }) {
+  return (
+    <div className="alert-row">
+      <div className="threat">
+        <div className="threat-icon">
+          <ShieldAlert size={18} />
+        </div>
 
-              </div>
+        <div>
+          <strong>{alert.type}</strong>
+          <span>{alert.message}</span>
+        </div>
+      </div>
 
-            </div>
+      <div className="ip">{alert.ip}</div>
 
-            <div className="alert-table">
+      <div>
+        <span
+          className={`severity ${alert.severity.toLowerCase()}`}
+        >
+          {alert.severity}
+        </span>
+      </div>
 
-              <div className="table-header">
-                <span>THREAT</span>
-                <span>SOURCE</span>
-                <span>SEVERITY</span>
-                <span>TIME</span>
-              </div>
-
-              {filteredAlerts.length === 0 ? (
-
-                <div className="empty">
-                  <Shield size={30} />
-                  <strong>No alerts found</strong>
-                  <span>
-                    No security events match your current filters.
-                  </span>
-                </div>
-
-              ) : (
-
-                filteredAlerts.map((alert) => (
-
-                  <div className="alert-row" key={alert.id}>
-
-                    <div className="threat">
-
-                      <div className="threat-icon">
-                        <ShieldAlert size={18} />
-                      </div>
-
-                      <div>
-                        <strong>{alert.type}</strong>
-                        <span>{alert.message}</span>
-                      </div>
-
-                    </div>
-
-                    <div className="ip">
-                      {alert.ip}
-                    </div>
-
-                    <div>
-                      <span
-                        className={`severity ${alert.severity.toLowerCase()}`}
-                      >
-                        {alert.severity}
-                      </span>
-                    </div>
-
-                    <div className="time">
-                      {new Date(
-                        alert.created_at
-                      ).toLocaleTimeString()}
-                    </div>
-
-                  </div>
-
-                ))
-
-              )}
-
-            </div>
-
-          </section>
-
-        </main>
-
+      <div className="time">
+        {new Date(alert.created_at).toLocaleTimeString()}
       </div>
     </div>
   );
@@ -311,16 +452,34 @@ function App() {
 function StatCard({ icon, label, value }) {
   return (
     <div className="stat-card">
-
-      <div className="stat-icon">
-        {icon}
-      </div>
+      <div className="stat-icon">{icon}</div>
 
       <div>
         <span>{label}</span>
         <strong>{value}</strong>
       </div>
+    </div>
+  );
+}
 
+function RefreshButton({ onClick, loading }) {
+  return (
+    <button className="refresh-button" onClick={onClick}>
+      <RefreshCw
+        size={16}
+        className={loading ? "spin" : ""}
+      />
+      Refresh
+    </button>
+  );
+}
+
+function Empty() {
+  return (
+    <div className="empty">
+      <Shield size={30} />
+      <strong>No events found</strong>
+      <span>No data matches the current filters.</span>
     </div>
   );
 }
