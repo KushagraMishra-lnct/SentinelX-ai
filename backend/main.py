@@ -48,6 +48,8 @@ def get_alerts():
                 "message": alert.message,
                 "risk_score": alert.risk_score,
                 "risk_level": alert.risk_level,
+                "anomaly_score": alert.anomaly_score,
+                "anomaly_level": alert.anomaly_level,
                 "created_at": alert.created_at,
             }
             for alert in alerts

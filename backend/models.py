@@ -30,6 +30,16 @@ class Alert(Base):
         default="LOW",
     )
 
+    anomaly_score: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+    )
+
+    anomaly_level: Mapped[str] = mapped_column(
+        String(20),
+        default="LOW",
+    )
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

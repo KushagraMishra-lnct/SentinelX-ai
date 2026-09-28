@@ -482,15 +482,26 @@ button {
   font-weight: 800;
 }
 
+.severity.low {
+  color: #70d49a;
+  background: #10251a;
+}
+
+.severity.medium {
+  color: #eeb75e;
+  background: #292116;
+}
+
 .severity.high {
-  color: #ff7a88;
-  background: #28161a;
+  color: #ff9b6a;
+  background: #301b15;
 }
 
 .severity.critical {
-  color: #ff5555;
-  background: #321010;
+  color: #ff6b6b;
+  background: #351414;
 }
+
 
 /* EMPTY */
 
@@ -662,4 +673,30 @@ button {
 .severity.low {
   color: #70d49a;
   background: #10251a;
+}
+
+.anomaly-score {
+  color: #8b95a5;
+  font-size: 9px;
+}
+
+.anomaly-level {
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.anomaly-level.low {
+  color: #70d49a;
+}
+
+.anomaly-level.medium {
+  color: #eeb75e;
+}
+
+.anomaly-level.high {
+  color: #ff9b6a;
+}
+
+.anomaly-level.critical {
+  color: #ff6b6b;
 }

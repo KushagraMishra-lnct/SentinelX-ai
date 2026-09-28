@@ -51,7 +51,7 @@ function App() {
   const filteredAlerts = useMemo(() => {
     return alerts.filter((alert) => {
       const matchesSeverity =
-        severity === "ALL" || alert.severity === severity;
+        severity === "ALL" || alert.risk_level === severity;
 
       const text = search.toLowerCase();
 
@@ -78,9 +78,9 @@ function App() {
     );
   }, [events, search]);
 
-  const high = alerts.filter((a) => a.severity === "HIGH").length;
+  const high = alerts.filter((a) => a.risk_level === "HIGH").length;
   const critical = alerts.filter(
-    (a) => a.severity === "CRITICAL"
+    (a) => a.risk_level === "CRITICAL"
   ).length;
 
   return (
@@ -400,7 +400,7 @@ function Toolbar({
       </div>
 
       <div className="filters">
-        {["ALL", "HIGH", "CRITICAL"].map((level) => (
+        {["ALL", "LOW", "MEDIUM", "HIGH", "CRITICAL"].map((level) => (
           <button
             key={level}
             className={
@@ -434,17 +434,36 @@ function AlertRow({ alert }) {
 
       <div className="ip">{alert.ip}</div>
 
-      <div className="risk-cell">
-        <span
-          className={`severity ${alert.risk_level.toLowerCase()}`}
-        >
-          {alert.risk_level}
-        </span>
 
-        <span className="risk-score">
-          Risk {alert.risk_score}/100
-        </span>
-      </div>
+<div className="risk-cell">
+  <span
+    className={`severity ${alert.risk_level.toLowerCase()}`}
+  >
+    Risk: {alert.risk_level}
+  </span>
+
+  <span className="risk-score">
+    Final Risk: {alert.risk_score}/100
+  </span>
+
+  <span
+    className={`anomaly-level ${alert.anomaly_level.toLowerCase()}`}
+  >
+    Anomaly: {alert.anomaly_level}
+  </span>
+
+  <span className="anomaly-score">
+    Anomaly Score: {alert.anomaly_score}/100
+  </span>
+</div>
+
+
+
+
+
+
+
+
 
       <div className="time">
         {new Date(alert.created_at).toLocaleTimeString()}

@@ -9,48 +9,83 @@ from backend.event_service import save_event
 def run_auth_detection():
     events = parse_log_file("logs/auth.log")
 
+    normalized_events = []
+
     for event in events:
-        save_event({
+        normalized = {
             "source": "auth.log",
             "level": event["level"],
             "ip": event["ip"],
             "message": event["message"],
-        })
+        }
 
-    return detect_brute_force(events)
+        normalized_events.append(normalized)
+        save_event(normalized)
+
+    alerts = detect_brute_force(events)
+
+    return alerts, normalized_events
 
 
 def run_web_detection():
     alerts = []
+    normalized_events = []
 
     with open("logs/web.log", "r") as file:
         for line in file:
+            parts = line.strip().split()
+
+            if len(parts) < 2:
+                continue
+
+            level = parts[2] if len(parts) > 2 else "INFO"
+
+            ip = None
+
+            for part in parts:
+                if part.startswith("ip="):
+                    ip = part.split("=", 1)[1]
+
+            message = " ".join(parts[3:])
+
+            normalized_events.append({
+                "source": "web.log",
+                "level": level,
+                "ip": ip,
+                "message": message,
+            })
+
             alerts.extend(detect_web_attack(line))
 
-    return alerts
+    return alerts, normalized_events
 
 
 def run_detection():
-    alerts = []
+    auth_alerts, auth_events = run_auth_detection()
+    web_alerts, web_events = run_web_detection()
 
-    alerts.extend(run_auth_detection())
-    alerts.extend(run_web_detection())
+    all_events = auth_events + web_events
+    all_alerts = auth_alerts + web_alerts
 
-    return alerts
+    return all_alerts, all_events
 
 
 if __name__ == "__main__":
-    alerts = run_detection()
+    alerts, events = run_detection()
 
     print(f"\n[+] Detection complete")
+    print(f"[+] Events analyzed: {len(events)}")
     print(f"[+] Alerts generated: {len(alerts)}\n")
 
     for alert_data in alerts:
-        saved_alert = save_alert(alert_data)
+        saved_alert = save_alert(alert_data, events)
 
         print(
             f"[{saved_alert.severity}] "
             f"{saved_alert.alert_type} | "
             f"{saved_alert.ip} | "
+            f"Risk {saved_alert.risk_score}/100 | "
+            f"Anomaly {saved_alert.anomaly_score}/100 | "
             f"Saved as alert #{saved_alert.id}"
         )
+
