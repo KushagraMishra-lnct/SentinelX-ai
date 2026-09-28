@@ -1,11 +1,22 @@
 from detector.log_parser import parse_log_file
 from detector.detector import detect_brute_force
 from detector.web_detector import detect_web_attack
+
 from backend.alert_service import save_alert
+from backend.event_service import save_event
 
 
 def run_auth_detection():
     events = parse_log_file("logs/auth.log")
+
+    for event in events:
+        save_event({
+            "source": "auth.log",
+            "level": event["level"],
+            "ip": event["ip"],
+            "message": event["message"],
+        })
+
     return detect_brute_force(events)
 
 
@@ -43,4 +54,3 @@ if __name__ == "__main__":
             f"{saved_alert.ip} | "
             f"Saved as alert #{saved_alert.id}"
         )
-

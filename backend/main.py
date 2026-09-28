@@ -54,3 +54,30 @@ def get_alerts():
     finally:
         db.close()
 
+from backend.event_model import Event
+
+
+@app.get("/events")
+def get_events():
+    db = SessionLocal()
+
+    try:
+        events = db.scalars(
+            select(Event)
+            .order_by(Event.created_at.desc())
+        ).all()
+
+        return [
+            {
+                "id": event.id,
+                "source": event.source,
+                "level": event.level,
+                "ip": event.ip,
+                "message": event.message,
+                "created_at": event.created_at,
+            }
+            for event in events
+        ]
+
+    finally:
+        db.close()
