@@ -83,6 +83,9 @@ function App() {
     (a) => a.risk_level === "CRITICAL"
   ).length;
 
+
+
+
   return (
     <div className="app">
       <header className="topbar">
@@ -203,6 +206,14 @@ function Dashboard({
 }) {
   const uniqueIPs = new Set(alerts.map((a) => a.ip)).size;
 
+  const attackCounts = alerts.reduce((counts, alert) => {
+    counts[alert.type] = (counts[alert.type] || 0) + 1;
+    return counts;
+  }, {});
+
+  const topAttack = Object.entries(attackCounts)
+    .sort((a, b) => b[1] - a[1])[0];
+
   return (
     <>
       <div className="page-heading">
@@ -241,6 +252,14 @@ function Dashboard({
           label="Source IPs"
           value={uniqueIPs}
         />
+
+        <StatCard
+          icon={<ShieldAlert />}
+          label="Top Attack"
+          value={topAttack ? `${topAttack[0]} (${topAttack[1]})` : "None"}
+        />
+
+
       </section>
 
       <section className="panel">
