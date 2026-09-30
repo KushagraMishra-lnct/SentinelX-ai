@@ -46,6 +46,18 @@ def save_alert(alert_data, all_events=None):
         else:
             final_level = "LOW"
 
+        # Safe automated response simulation
+        if final_level == "CRITICAL":
+            response_status = "MITIGATION_TRIGGERED"
+            response_action = "IP_FLAGGED"
+        elif final_level == "HIGH":
+            response_status = "RESPONSE_RECOMMENDED"
+            response_action = "IP_FLAGGED"
+        else:
+            response_status = "PENDING"
+            response_action = "NONE"
+
+
         alert = Alert(
             alert_type=alert_data["type"],
             severity=alert_data["severity"],
@@ -57,6 +69,9 @@ def save_alert(alert_data, all_events=None):
             risk_level=final_level,
             anomaly_score=anomaly_score,
             anomaly_level=anomaly_level,
+            response_status=response_status,
+            response_action=response_action,
+
         )
 
         db.add(alert)

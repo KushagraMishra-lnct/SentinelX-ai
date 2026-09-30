@@ -50,6 +50,17 @@ class Alert(Base):
         default="NORMAL",
     )
 
+    response_status: Mapped[str] = mapped_column(
+        String(30),
+        default="PENDING",
+    )
+
+    response_action: Mapped[str] = mapped_column(
+        String(100),
+        default="NONE",
+    )
+
+
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow,

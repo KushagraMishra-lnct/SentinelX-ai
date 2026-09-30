@@ -486,7 +486,18 @@ function AlertRow({ alert }) {
     <span className="ml-score">
       ML Score: {alert.ml_score}/100
     </span>
-  </>
+
+    <div className="response-info">
+      <span className="response-status">
+        Response: {alert.response_status}
+      </span>
+
+      <span className="response-action">
+        Action: {alert.response_action}
+      </span>
+    </div>
+
+ </>
 ) : (
   <span className="ml-prediction">
     ML: NOT ANALYZED
